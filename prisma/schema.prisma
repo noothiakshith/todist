@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String             @id @default(cuid())
+  name          String
+  email         String             @unique
+  password      String
+  tasksCreated  Task[]             @relation("CreatorTasks")
+  tasksAssigned Task[]             @relation("AssigneeTasks")
+  memberships   UserOrganization[]
+  notifications Notification[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  Comment       Comment[]
+}
+
+model Task {
+  id             String         @id @default(cuid())
+  title          String
+  description    String
+  status         String         @default("pending")
+  priority       String         @default("medium") // low, medium, high
+  dueDate        DateTime?
+  createdBy      User           @relation("CreatorTasks", fields: [createdById], references: [id])
+  createdById    String
+  assignedTo     User?          @relation("AssigneeTasks", fields: [assignedToId], references: [id])
+  assignedToId   String?
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organizationId String
+  comments       Comment[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  Notification   Notification[]
+}
+
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  memberships UserOrganization[]
+  tasks       Task[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model UserOrganization {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String       @default("member") // e.g., admin, member
+  user           User         @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  taskId    String?
+  message   String
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  task      Task?    @relation(fields: [taskId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  user      User     @relation(fields: [userId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id])
+  createdAt DateTime @default(now())
+}
